@@ -137,6 +137,11 @@ include_directories(
 add_executable(
   object_detection
   src/object_detection_node.cpp
+  src/object_detection.cpp
+  src/video_handler.cpp
+  src/color_filter.cpp
+  src/distortion_corrector.cpp
+  src/ocam_functions.cpp
 )
 
 ## Rename C++ executable without prefix
