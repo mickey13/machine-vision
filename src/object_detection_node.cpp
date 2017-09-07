@@ -4,31 +4,39 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <string>
+#include <vector>
+#include <map>
+
+void loadColorFilters(const ros::NodeHandle& rosNode, ObjectDetection& objectDetection);
+void loadObjectTypes(const ros::NodeHandle& rosNode, ObjectDetection& objectDetection);
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "object_detection");
   ros::NodeHandle rosNode;
-  std::string cameraTopic = "camera/image_raw";
-  std::string lensCalibrationFile = "config/fisheye_calibration.txt";
-  bool correctDistortion = false;
+  std::string cameraTopic = "image_raw";
+  std::string ocamCalibrationFile;
   float frequency = 5.0;
   int pixelWidth = 640;
   int pixelHeight = 480;
 
-  rosNode.param(ros::this_node::getName() + "/frequency", frequency, frequency);
-  rosNode.param(ros::this_node::getName() + "/camera_topic", cameraTopic, cameraTopic);
-  rosNode.param(ros::this_node::getName() + "/pixel_width", pixelWidth, pixelWidth);
-  rosNode.param(ros::this_node::getName() + "/pixel_height", pixelHeight, pixelHeight);
-  rosNode.param(ros::this_node::getName() + "/correct_distortion", correctDistortion, correctDistortion);
-  rosNode.param(ros::this_node::getName() + "/lens_calibration", lensCalibrationFile, lensCalibrationFile);
+  rosNode.param(ros::this_node::getNamespace() + "/frequency", frequency, frequency);
+  rosNode.param(ros::this_node::getNamespace() + "/camera_topic", cameraTopic, cameraTopic);
+  rosNode.param(ros::this_node::getNamespace() + "/pixel_width", pixelWidth, pixelWidth);
+  rosNode.param(ros::this_node::getNamespace() + "/pixel_height", pixelHeight, pixelHeight);
 
   ros::Rate rosRate(frequency);
   VideoHandler videoHandler(rosNode, rosRate, cameraTopic, pixelWidth, pixelHeight);
-  if (correctDistortion) {
-    videoHandler.configureDistortionCorrection(lensCalibrationFile);
+  if (rosNode.param(ros::this_node::getNamespace() + "/ocam_calibration_file", ocamCalibrationFile, ocamCalibrationFile)) {
+    videoHandler.configureDistortionCorrection(ocamCalibrationFile);
   }
   ObjectDetection objectDetection(videoHandler);
-  objectDetection.loadColorFilters(ros::package::getPath("machine_vision") + "/config/color_filters.csv");
+  XmlRpc::XmlRpcValue colorFilterStruct;
+  XmlRpc::XmlRpcValue objectTypeStruct;
+  rosNode.getParam(ros::this_node::getNamespace() + "/machine_vision/color_filters", colorFilterStruct);
+  rosNode.getParam(ros::this_node::getNamespace() + "/machine_vision/object_types", objectTypeStruct);
+  objectDetection.loadColorFilters(colorFilterStruct);
+  objectDetection.loadObjectTypes(objectTypeStruct);
+
   while (rosNode.ok()) {
     ros::spinOnce();
     rosRate.sleep();

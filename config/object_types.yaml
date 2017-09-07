@@ -1,0 +1,21 @@
+machine_vision:
+  object_types:
+    - red_disc:
+        name: Red Disc
+        color_filters: [red_low, red_high]
+
+    - green_disc:
+        name: Green Disc
+        color_filters: [green]
+
+    - blue_disc:
+        name: Blue Disc
+        color_filters: [blue]
+
+    - yellow_disc:
+        name: Yellow Disc
+        color_filters: [yellow]
+
+    - orange_disc:
+        name: Orange Disc
+        color_filters: [orange]

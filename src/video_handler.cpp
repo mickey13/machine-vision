@@ -15,6 +15,8 @@ VideoHandler::VideoHandler(
   this->mRosNode = &rosNode;
   this->mCvImagePtr = NULL;
   this->mDistortionCorrector = NULL;
+  this->mObjectDetection = NULL;
+  this->mImageCallback = NULL;
   this->mCameraSubscriber = this->mImageTransport.subscribe(cameraTopic.c_str(), QUEUE_SIZE, &VideoHandler::imageCallback, this);
   this->mCameraPublisher = this->mImageTransport.advertise(VideoHandler::renameTopic(cameraTopic, "_annotated").c_str(), QUEUE_SIZE);
   this->mDebugPublisher = this->mImageTransport.advertise(VideoHandler::renameTopic(cameraTopic, "_debug").c_str(), QUEUE_SIZE);
@@ -58,7 +60,9 @@ void VideoHandler::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   if (this->mDistortionCorrector != NULL) {
     this->mCvImagePtr->image = this->mDistortionCorrector->undistortImage(this->mCvImagePtr->image);
   }
-  (*this->mObjectDetection.*this->mImageCallback)(this->mCvImagePtr->image.clone());
+  if (this->mObjectDetection != NULL && this->mImageCallback != NULL) {
+    (this->mObjectDetection->*this->mImageCallback)(this->mCvImagePtr->image.clone());
+  }
 }
 
 std::string VideoHandler::renameTopic(std::string topicName, std::string tag) {

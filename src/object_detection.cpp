@@ -19,34 +19,48 @@ void ObjectDetection::imageEvent(cv::Mat imageFrame) {
   this->mVideoHandler->publishDebugImage(contoursFrame, sensor_msgs::image_encodings::BGR8);
 }
 
-void ObjectDetection::loadColorFilters(std::string filename) {
-  try {
-    std::ifstream file(filename);
-    std::string line;
-    if (file.is_open()) {
-      while (std::getline(file, line)) {
-        this->configureColorFilter(line);
-      }
-      file.close();
+void ObjectDetection::loadColorFilters(XmlRpc::XmlRpcValue& colorFilterStruct) {
+  ROS_ASSERT(colorFilterStruct.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < colorFilterStruct.size(); ++i) {
+    ROS_ASSERT(colorFilterStruct[i].getType() == XmlRpc::XmlRpcValue::TypeStruct);
+    for (XmlRpc::XmlRpcValue::ValueStruct::iterator iter = colorFilterStruct[i].begin(); iter != colorFilterStruct[i].end(); ++iter) {
+      ROS_ASSERT(iter->second.getType() == XmlRpc::XmlRpcValue::TypeStruct);
+      ROS_ASSERT(iter->second.hasMember("min_hue"));
+      ROS_ASSERT(iter->second.hasMember("min_saturation"));
+      ROS_ASSERT(iter->second.hasMember("min_value"));
+      ROS_ASSERT(iter->second.hasMember("max_hue"));
+      ROS_ASSERT(iter->second.hasMember("max_saturation"));
+      ROS_ASSERT(iter->second.hasMember("max_value"));
+      ColorFilter colorFilter(
+        static_cast<int>(iter->second["min_hue"]),
+        static_cast<int>(iter->second["min_saturation"]),
+        static_cast<int>(iter->second["min_value"]),
+        static_cast<int>(iter->second["max_hue"]),
+        static_cast<int>(iter->second["max_saturation"]),
+        static_cast<int>(iter->second["max_value"])
+      );
+      this->mColorFilters.insert(std::pair<std::string, ColorFilter>(iter->first, colorFilter));
     }
-  }
-  catch (std::exception exception) {
-    ROS_ERROR("ObjectDetection::loadColorFilters - %s", exception.what());
   }
 }
 
-void ObjectDetection::configureColorFilter(std::string csvText) {
-  std::stringstream ss(csvText);
-  std::vector<unsigned int> params;
-  std::string colorText;
-  std::string token;
-  getline(ss, colorText, ',');
-  while (ss.good()) {
-    getline(ss, token, ',');
-    params.push_back(std::stoi(token));
+void ObjectDetection::loadObjectTypes(XmlRpc::XmlRpcValue& objectTypeStruct) {
+  ROS_ASSERT(objectTypeStruct.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < objectTypeStruct.size(); ++i)  {
+    ROS_ASSERT(objectTypeStruct[i].getType() == XmlRpc::XmlRpcValue::TypeStruct);
+    for (XmlRpc::XmlRpcValue::ValueStruct::iterator iter = objectTypeStruct[i].begin(); iter != objectTypeStruct[i].end(); ++iter) {
+      ROS_ASSERT(iter->second.getType() == XmlRpc::XmlRpcValue::TypeStruct);
+      ROS_ASSERT(iter->second.hasMember("name"));
+      ROS_ASSERT(iter->second.hasMember("color_filters"));
+      ROS_ASSERT(iter->second["color_filters"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+      std::vector<ColorFilter*> colorFilters;
+      for (int i = 0; i < iter->second["color_filters"].size(); ++i) {
+        std::string filterName = static_cast<std::string>((iter->second)["color_filters"][i]);
+        colorFilters.push_back(&(this->mColorFilters.find(filterName)->second));
+      }
+      ObjectType objectType(iter->second["name"], colorFilters);
+    }
   }
-  ColorFilter colorFilter(params[0], params[1], params[2], params[3], params[4], params[5]);
-  this->mColorFilters.insert(std::pair<std::string, ColorFilter>(colorText, colorFilter));
 }
 
 cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
@@ -55,6 +69,9 @@ cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
     std::map<std::string, ColorFilter>::const_iterator iter = this->mColorFilters.find("white");
     if (iter != this->mColorFilters.end()) {
       thresholdFrame = iter->second.process(imageFrame);
+    }
+    else {
+      thresholdFrame = cv::Mat::zeros(imageFrame.size(), CV_8UC1);
     }
   }
   return thresholdFrame;

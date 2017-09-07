@@ -1,0 +1,65 @@
+machine_vision:
+  color_filters:
+    - black:
+        min_hue: 0
+        min_saturation: 0
+        min_value: 0
+        max_hue: 15
+        max_saturation: 255
+        max_value: 255
+
+    - white:
+        min_hue: 0
+        min_saturation: 0
+        min_value: 200
+        max_hue: 255
+        max_saturation: 55
+        max_value: 255
+
+    - red_low:
+        min_hue: 0
+        min_saturation: 30
+        min_value: 200
+        max_hue: 10
+        max_saturation: 255
+        max_value: 255
+
+    - red_high:
+        min_hue: 150
+        min_saturation: 30
+        min_value: 200
+        max_hue: 180
+        max_saturation: 255
+        max_value: 255
+
+    - green:
+        min_hue: 40
+        min_saturation: 30
+        min_value: 200
+        max_hue: 70
+        max_saturation: 255
+        max_value: 255
+
+    - blue:
+        min_hue: 90
+        min_saturation: 30
+        min_value: 200
+        max_hue: 130
+        max_saturation: 255
+        max_value: 255
+
+    - yellow:
+        min_hue: 26
+        min_saturation: 30
+        min_value: 200
+        max_hue: 40
+        max_saturation: 255
+        max_value: 255
+
+    - orange:
+        min_hue: 10
+        min_saturation: 30
+        min_value: 200
+        max_hue: 25
+        max_saturation: 255
+        max_value: 255
