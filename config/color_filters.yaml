@@ -4,9 +4,9 @@ machine_vision:
         min_hue: 0
         min_saturation: 0
         min_value: 0
-        max_hue: 15
+        max_hue: 255
         max_saturation: 255
-        max_value: 255
+        max_value: 15
 
     - white:
         min_hue: 0
