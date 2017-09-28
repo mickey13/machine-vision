@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
   if (rosNode.param(ros::this_node::getNamespace() + "/ocam_calibration_file", ocamCalibrationFile, ocamCalibrationFile)) {
     videoHandler.configureDistortionCorrection(ocamCalibrationFile);
   }
-  ObjectDetection objectDetection(videoHandler);
+  ObjectDetection objectDetection(rosNode, videoHandler);
   XmlRpc::XmlRpcValue colorFilterStruct;
   XmlRpc::XmlRpcValue objectTypeStruct;
   rosNode.getParam(ros::this_node::getNamespace() + "/machine_vision/color_filters", colorFilterStruct);

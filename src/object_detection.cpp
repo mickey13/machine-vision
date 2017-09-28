@@ -1,13 +1,20 @@
 #include <machine_vision/object_detection.h>
+#include <machine_vision/Observation.h>
+#include <machine_vision/ObservationArray.h>
 
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <string>
 
-ObjectDetection::ObjectDetection(VideoHandler& videoHandler) {
+ObjectDetection::ObjectDetection(
+  ros::NodeHandle& rosNode,
+  VideoHandler& videoHandler
+) {
+  this->mRosNode = &rosNode;
   this->mVideoHandler = &videoHandler;
   this->mVideoHandler->registerCallback(this, &ObjectDetection::imageEvent);
+  this->mObservationPublisher = this->mRosNode->advertise<machine_vision::ObservationArray>("machine_vision/observations", 1);
 }
 
 void ObjectDetection::imageEvent(cv::Mat imageFrame) {
@@ -17,6 +24,7 @@ void ObjectDetection::imageEvent(cv::Mat imageFrame) {
   cv::Mat annotatedFrame = this->identifyTarget(imageFrame, contours);
   this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
   this->mVideoHandler->publishDebugImage(contoursFrame, sensor_msgs::image_encodings::BGR8);
+  this->publishObservations(contours);
 }
 
 void ObjectDetection::loadColorFilters(XmlRpc::XmlRpcValue& colorFilterStruct) {
@@ -113,4 +121,18 @@ cv::Mat ObjectDetection::identifyTarget(const cv::Mat& imageFrame, const std::ve
     // }
   }
   return targetImage;
+}
+
+void ObjectDetection::publishObservations(std::vector<std::vector<cv::Point>>& contours) const {
+  machine_vision::ObservationArray observationArrayMsg;
+  for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
+    machine_vision::Observation observationMsg;
+    cv::Point2f center;
+    float radius;
+    cv::minEnclosingCircle(*iter, center, radius);
+    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
+    observationMsg.position.y = this->mVideoHandler->normalizeHeightPosition(center.y);
+    observationArrayMsg.observations.push_back(observationMsg);
+  }
+  this->mObservationPublisher.publish(observationArrayMsg);
 }

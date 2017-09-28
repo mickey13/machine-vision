@@ -26,10 +26,13 @@ public:
   void publishAnnotatedImage(const cv::Mat& imageFrame, std::string imageEncoding) const;
   void publishDebugImage(const cv::Mat& imageFrame, std::string imageEncoding) const;
   int getLineThickness() const;
+  double normalizeWidthPosition(unsigned int x) const;
+  double normalizeHeightPosition(unsigned int y) const;
 
 private:
   VideoHandler();
   void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+  double normalizePosition(unsigned int position, unsigned int range) const;
   static std::string renameTopic(std::string topicName, std::string tag);
 
   const unsigned int PIXEL_WIDTH;

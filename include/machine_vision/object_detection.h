@@ -10,7 +10,10 @@
 
 class ObjectDetection {
 public:
-  ObjectDetection(VideoHandler& videoHandler);
+  ObjectDetection(
+    ros::NodeHandle& rosNode,
+    VideoHandler& videoHandler
+  );
   void imageEvent(cv::Mat imageFrame);
   void loadColorFilters(XmlRpc::XmlRpcValue& colorFilterStruct);
   void loadObjectTypes(XmlRpc::XmlRpcValue& objectTypeStruct);
@@ -20,6 +23,10 @@ private:
   cv::Mat filterByColor(const cv::Mat& imageFrame) const;
   cv::Mat detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const;
   cv::Mat identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const;
+  void publishObservations(std::vector<std::vector<cv::Point>>& contours) const;
+
+  ros::NodeHandle* mRosNode;
+  ros::Publisher mObservationPublisher;
 
   VideoHandler* mVideoHandler;
   std::map<std::string, ColorFilter> mColorFilters;

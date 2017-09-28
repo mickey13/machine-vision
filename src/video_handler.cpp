@@ -55,6 +55,14 @@ int VideoHandler::getLineThickness() const {
   return this->PIXEL_WIDTH / 256;
 }
 
+double VideoHandler::normalizeWidthPosition(unsigned int x) const {
+  return this->normalizePosition(x, this->PIXEL_WIDTH);
+}
+
+double VideoHandler::normalizeHeightPosition(unsigned int y) const {
+  return this->normalizePosition(y, this->PIXEL_HEIGHT);
+}
+
 void VideoHandler::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   this->mCvImagePtr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
   if (this->mDistortionCorrector != NULL) {
@@ -63,6 +71,10 @@ void VideoHandler::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   if (this->mObjectDetection != NULL && this->mImageCallback != NULL) {
     (this->mObjectDetection->*this->mImageCallback)(this->mCvImagePtr->image.clone());
   }
+}
+
+double VideoHandler::normalizePosition(unsigned int position, unsigned int range) const {
+  return (((double) position) - ((double) (range / 2))) / ((double) (range / 2));
 }
 
 std::string VideoHandler::renameTopic(std::string topicName, std::string tag) {
