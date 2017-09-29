@@ -6,7 +6,8 @@
 class ColorFilter {
 public:
   ColorFilter(unsigned int minHue, unsigned int minSaturation, unsigned int minValue, unsigned int maxHue, unsigned int maxSaturation, unsigned int maxValue);
-  cv::Mat process(const cv::Mat& imageFrame) const;
+  cv::Mat filterImage(const cv::Mat& imageFrame) const;
+  void test() const;
 
 private:
   ColorFilter();

@@ -20,6 +20,7 @@ public:
 
 private:
   ObjectDetection();
+  cv::Mat filterObjectTypes(const cv::Mat& imageFrame) const;
   cv::Mat filterByColor(const cv::Mat& imageFrame) const;
   cv::Mat detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const;
   cv::Mat identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const;

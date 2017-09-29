@@ -7,7 +7,7 @@ ColorFilter::ColorFilter(unsigned int minHue, unsigned int minSaturation, unsign
   this->mMaxColor = cv::Scalar(maxHue, maxSaturation, maxValue);
 }
 
-cv::Mat ColorFilter::process(const cv::Mat& imageFrame) const {
+cv::Mat ColorFilter::filterImage(const cv::Mat& imageFrame) const {
   cv::Mat thresholdFrame;
   try {
     cv::Mat bgrImage = imageFrame.clone();
@@ -21,4 +21,8 @@ cv::Mat ColorFilter::process(const cv::Mat& imageFrame) const {
   catch (cv::Exception exception) {
     ROS_ERROR("ColorFilter::process - %s", exception.what());
   }
+}
+
+void ColorFilter::test() const {
+  std::cout << "Color Filter: " << this->mMinColor << ", " << this->mMaxColor << std::endl;
 }

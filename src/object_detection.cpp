@@ -19,11 +19,11 @@ ObjectDetection::ObjectDetection(
 
 void ObjectDetection::imageEvent(cv::Mat imageFrame) {
   std::vector<std::vector<cv::Point>> contours;
-  cv::Mat thresholdFrame = this->filterByColor(imageFrame);
+  cv::Mat thresholdFrame = this->filterObjectTypes(imageFrame);
   cv::Mat contoursFrame = this->detectExteriorContours(thresholdFrame, true, contours);
   cv::Mat annotatedFrame = this->identifyTarget(imageFrame, contours);
   this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
-  this->mVideoHandler->publishDebugImage(contoursFrame, sensor_msgs::image_encodings::BGR8);
+  this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
   this->publishObservations(contours);
 }
 
@@ -67,8 +67,18 @@ void ObjectDetection::loadObjectTypes(XmlRpc::XmlRpcValue& objectTypeStruct) {
         colorFilters.push_back(&(this->mColorFilters.find(filterName)->second));
       }
       ObjectType objectType(iter->second["name"], colorFilters);
+      this->mObjectTypes.insert(std::pair<std::string, ObjectType>(iter->first, objectType));
     }
   }
+}
+
+cv::Mat ObjectDetection::filterObjectTypes(const cv::Mat& imageFrame) const {
+  cv::Mat combinedFrame = cv::Mat::zeros(imageFrame.size(), CV_8UC1);
+  for (std::map<std::string, ObjectType>::const_iterator iter = this->mObjectTypes.begin(); iter != this->mObjectTypes.end(); ++iter) {
+    cv::Mat thresholdFrame = iter->second.filterImage(imageFrame);
+    cv::bitwise_or(thresholdFrame, combinedFrame, combinedFrame);
+  }
+  return combinedFrame;
 }
 
 cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
@@ -76,7 +86,7 @@ cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
   if (imageFrame.dims > 0) {
     std::map<std::string, ColorFilter>::const_iterator iter = this->mColorFilters.find("white");
     if (iter != this->mColorFilters.end()) {
-      thresholdFrame = iter->second.process(imageFrame);
+      thresholdFrame = iter->second.filterImage(imageFrame);
     }
     else {
       thresholdFrame = cv::Mat::zeros(imageFrame.size(), CV_8UC1);
@@ -86,7 +96,6 @@ cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
 }
 
 cv::Mat ObjectDetection::detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const {
-  // std::vector<std::vector<cv::Point>> contours;
   std::vector<cv::Vec4i> hierarchy;
   cv::Mat grayImage;
   cv::Mat cannyOutput;
@@ -101,7 +110,6 @@ cv::Mat ObjectDetection::detectExteriorContours(const cv::Mat& imageFrame, bool 
   cv::blur(grayImage, grayImage, cv::Size(3, 3));
   cv::Canny(grayImage, cannyOutput, threshold, threshold * 3, 3);
   cv::findContours(cannyOutput, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-  // cv::findContours(cannyOutput, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
   cv::Mat contourImage = cv::Mat::zeros(cannyOutput.size(), CV_8UC3);
   for (int i = 0; i < contours.size(); ++i) {
     cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
@@ -115,10 +123,8 @@ cv::Mat ObjectDetection::identifyTarget(const cv::Mat& imageFrame, const std::ve
   cv::RNG rng(12345);
   int lineThickness = this->mVideoHandler->getLineThickness();
   for (int i = 0; i < contours.size(); ++i) {
-    // if (ObjectDetection::isContourSquare(contours[i])) {
-      cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
-      cv::drawContours(targetImage, contours, i, color, lineThickness, 8);
-    // }
+    cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
+    cv::drawContours(targetImage, contours, i, color, lineThickness, 8);
   }
   return targetImage;
 }
