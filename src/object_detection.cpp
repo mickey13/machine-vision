@@ -1,4 +1,5 @@
 #include <machine_vision/object_detection.h>
+#include <machine_vision/shape_identifier.h>
 #include <machine_vision/Observation.h>
 #include <machine_vision/ObservationArray.h>
 
@@ -18,13 +19,13 @@ ObjectDetection::ObjectDetection(
 }
 
 void ObjectDetection::imageEvent(cv::Mat imageFrame) {
+  ShapeIdentifier shapeIdentifier;
   std::vector<std::vector<cv::Point>> contours;
   cv::Mat thresholdFrame = this->filterObjectTypes(imageFrame);
   cv::Mat contoursFrame = this->detectExteriorContours(thresholdFrame, true, contours);
-  cv::Mat annotatedFrame = this->identifyTarget(imageFrame, contours);
+  cv::Mat annotatedFrame = this->averageObservationsAndPublish(imageFrame, contours);
   this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
   this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
-  this->publishObservations(contours);
 }
 
 void ObjectDetection::loadColorFilters(XmlRpc::XmlRpcValue& colorFilterStruct) {
@@ -137,8 +138,33 @@ void ObjectDetection::publishObservations(std::vector<std::vector<cv::Point>>& c
     float radius;
     cv::minEnclosingCircle(*iter, center, radius);
     observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
-    observationMsg.position.y = this->mVideoHandler->normalizeHeightPosition(center.y);
+    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(center.y);
     observationArrayMsg.observations.push_back(observationMsg);
+    ShapeIdentifier shapeIdentifier;
+    shapeIdentifier.processContour(*iter);
   }
   this->mObservationPublisher.publish(observationArrayMsg);
+}
+
+cv::Mat ObjectDetection::averageObservationsAndPublish(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const {
+  cv::Mat img = imageFrame.clone();
+  machine_vision::ObservationArray observationArrayMsg;
+  machine_vision::Observation observationMsg;
+  cv::Point2f averageCenter;
+  for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
+    cv::Point2f center;
+    float radius;
+    cv::minEnclosingCircle(*iter, center, radius);
+    averageCenter += center;
+  }
+  if (contours.size() > 0) {
+    averageCenter.x /= contours.size();
+    averageCenter.y /= contours.size();
+    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(averageCenter.x);
+    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(averageCenter.y);
+    observationArrayMsg.observations.push_back(observationMsg);
+    cv::circle(img, averageCenter, 20, cv::Scalar(0,255,0), -1, cv::LINE_AA);
+  }
+  this->mObservationPublisher.publish(observationArrayMsg);
+  return img;
 }

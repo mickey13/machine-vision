@@ -25,6 +25,7 @@ private:
   cv::Mat detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const;
   cv::Mat identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const;
   void publishObservations(std::vector<std::vector<cv::Point>>& contours) const;
+  cv::Mat averageObservationsAndPublish(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const;
 
   ros::NodeHandle* mRosNode;
   ros::Publisher mObservationPublisher;

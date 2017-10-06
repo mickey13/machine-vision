@@ -142,6 +142,7 @@ add_executable(
   src/object_detection.cpp
   src/video_handler.cpp
   src/color_filter.cpp
+  src/shape_identifier.cpp
   src/object_type.cpp
   src/distortion_corrector.cpp
   src/ocam_functions.cpp
