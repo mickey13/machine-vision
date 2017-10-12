@@ -163,7 +163,7 @@ cv::Mat ObjectDetection::averageObservationsAndPublish(const cv::Mat& imageFrame
     observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(averageCenter.x);
     observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(averageCenter.y);
     observationArrayMsg.observations.push_back(observationMsg);
-    cv::circle(img, averageCenter, 20, cv::Scalar(0,255,0), -1, cv::LINE_AA);
+    cv::circle(img, averageCenter, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0,255,0), -1, cv::LINE_AA);
   }
   this->mObservationPublisher.publish(observationArrayMsg);
   return img;

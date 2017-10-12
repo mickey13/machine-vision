@@ -33,10 +33,15 @@ private:
   VideoHandler();
   void imageCallback(const sensor_msgs::ImageConstPtr& msg);
   double normalizePosition(unsigned int position, unsigned int range) const;
+  cv::Mat cullImage(const cv::Mat& imageFrame) const;
+
   static std::string renameTopic(std::string topicName, std::string tag);
 
   const unsigned int PIXEL_WIDTH;
   const unsigned int PIXEL_HEIGHT;
+
+  unsigned int mMarginWidth;
+  unsigned int mMarginHeight;
 
   ros::NodeHandle* mRosNode;
   ros::Rate mRosRate;
