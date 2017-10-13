@@ -60,11 +60,11 @@ int VideoHandler::getLineThickness() const {
 }
 
 double VideoHandler::normalizeWidthPosition(unsigned int x) const {
-  return this->normalizePosition(x, this->PIXEL_WIDTH);
+  return this->normalizePosition(x, (this->PIXEL_WIDTH - (2 * this->mMarginWidth)));
 }
 
 double VideoHandler::normalizeHeightPosition(unsigned int y) const {
-  return this->normalizePosition(y, this->PIXEL_HEIGHT);
+  return this->normalizePosition(y, (this->PIXEL_HEIGHT - (2 * this->mMarginHeight)));
 }
 
 void VideoHandler::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
