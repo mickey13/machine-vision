@@ -8,7 +8,7 @@ class ShapeIdentifier {
 public:
   ShapeIdentifier();
   void processContour(const std::vector<cv::Point>& contour) const;
-  cv::Mat findCircles(const cv::Mat& imageFrame, const cv::Mat& thresholdFrame) const;
+  cv::Mat findCircles(const cv::Mat& imageFrame, const cv::Mat& thresholdFrame, std::vector<cv::Vec3f>& circles) const;
 };
 
 #endif

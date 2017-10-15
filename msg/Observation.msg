@@ -1,1 +1,2 @@
 geometry_msgs/Point position
+bool geometry_detected
