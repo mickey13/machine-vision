@@ -29,7 +29,7 @@ void ObjectDetection::imageEvent(cv::Mat imageFrame) {
     this->publishGeometryObservations(circles);
   }
   else {
-    cv::Mat annotatedFrame = this->averageObservationsAndPublish(imageFrame, contours);
+    annotatedFrame = this->averageObservationsAndPublish(imageFrame, contours);
   }
   this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
   this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
