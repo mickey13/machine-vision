@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
 )
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -147,6 +148,11 @@ add_executable(
   src/distortion_corrector.cpp
   src/ocam_functions.cpp
 )
+add_executable(
+  image_view
+  src/image_view_node.cpp
+  src/image_view.cpp
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,10 +167,20 @@ add_dependencies(
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
+add_dependencies(
+  image_view
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
   object_detection
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(
+  image_view
+  ${OpenCV_LIBS}
   ${catkin_LIBRARIES}
 )
 
