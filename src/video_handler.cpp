@@ -18,8 +18,8 @@ VideoHandler::VideoHandler(
   this->mObjectDetection = NULL;
   this->mImageCallback = NULL;
   this->mCameraSubscriber = this->mImageTransport.subscribe(cameraTopic.c_str(), QUEUE_SIZE, &VideoHandler::imageCallback, this);
-  this->mCameraPublisher = this->mImageTransport.advertise(VideoHandler::renameTopic(cameraTopic, "_annotated").c_str(), QUEUE_SIZE);
-  this->mDebugPublisher = this->mImageTransport.advertise(VideoHandler::renameTopic(cameraTopic, "_debug").c_str(), QUEUE_SIZE);
+  this->mAnnotatedImagePublisher = this->mImageTransport.advertise("machine_vision/image_annotated", QUEUE_SIZE);
+  this->mFilteredImagePublisher = this->mImageTransport.advertise("machine_vision/image_filtered", QUEUE_SIZE);
   this->mMarginWidth = 0;
   this->mMarginHeight = 0;
 }
@@ -45,14 +45,14 @@ void VideoHandler::publishAnnotatedImage(const cv::Mat& imageFrame, std::string 
   cv_bridge::CvImage cvImage;
   cvImage.encoding = imageEncoding;
   cvImage.image = imageFrame;
-  this->mCameraPublisher.publish(cvImage.toImageMsg());
+  this->mAnnotatedImagePublisher.publish(cvImage.toImageMsg());
 }
 
 void VideoHandler::publishDebugImage(const cv::Mat& imageFrame, std::string imageEncoding) const {
   cv_bridge::CvImage cvImage;
   cvImage.encoding = imageEncoding;
   cvImage.image = imageFrame;
-  this->mDebugPublisher.publish(cvImage.toImageMsg());
+  this->mFilteredImagePublisher.publish(cvImage.toImageMsg());
 }
 
 int VideoHandler::getLineThickness() const {
@@ -85,12 +85,4 @@ cv::Mat VideoHandler::cullImage(const cv::Mat& imageFrame) const {
   cv::Rect rectRoi = cv::Rect(this->mMarginWidth, this->mMarginHeight, PIXEL_WIDTH - (2 * this->mMarginWidth), PIXEL_HEIGHT - (2 * this->mMarginHeight));
   cv::Mat imageRoi = imageFrame(rectRoi);
   return imageRoi;
-}
-
-std::string VideoHandler::renameTopic(std::string topicName, std::string tag) {
-  std::size_t pos = topicName.find("_raw");
-  if (pos != std::string::npos) {
-    topicName = topicName.substr(0, pos);
-  }
-  return topicName + tag;
 }

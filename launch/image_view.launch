@@ -1,8 +1,9 @@
 <?xml version='1.0' ?>
 <launch>
+  <arg name='name' default='machine_vision' />
   <arg name='camera_topic' default='image_raw' />
 
-  <node name='machine_vision' pkg='machine_vision' type='image_view' output='screen'>
-    <param name='camera_topic' value='$(arg camera_topic)' />
+  <node name='$(arg name)' pkg='machine_vision' type='image_view' output='screen'>
+    <remap from='image' to='$(arg camera_topic)' />
   </node>
 </launch>

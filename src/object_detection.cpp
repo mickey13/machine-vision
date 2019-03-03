@@ -25,12 +25,7 @@ void ObjectDetection::imageEvent(cv::Mat imageFrame) {
   cv::Mat thresholdFrame = this->filterObjectTypes(imageFrame);
   cv::Mat contoursFrame = this->detectExteriorContours(thresholdFrame, true, contours);
   cv::Mat annotatedFrame = shapeIdentifier.findCircles(imageFrame, thresholdFrame, circles);
-  if (circles.size() == 1) {
-    this->publishGeometryObservations(circles);
-  }
-  else {
-    annotatedFrame = this->averageObservationsAndPublish(imageFrame, contours);
-  }
+  annotatedFrame = this->publishObservations(imageFrame, contours);
   this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
   this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
 }
@@ -126,65 +121,60 @@ cv::Mat ObjectDetection::detectExteriorContours(const cv::Mat& imageFrame, bool 
   return contourImage;
 }
 
-cv::Mat ObjectDetection::identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const {
-  cv::Mat targetImage = imageFrame.clone();
-  cv::RNG rng(12345);
-  int lineThickness = this->mVideoHandler->getLineThickness();
-  for (int i = 0; i < contours.size(); ++i) {
-    cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
-    cv::drawContours(targetImage, contours, i, color, lineThickness, 8);
-  }
-  return targetImage;
-}
+// cv::Mat ObjectDetection::identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const {
+//   cv::Mat targetImage = imageFrame.clone();
+//   cv::RNG rng(12345);
+//   int lineThickness = this->mVideoHandler->getLineThickness();
+//   for (int i = 0; i < contours.size(); ++i) {
+//     cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
+//     cv::drawContours(targetImage, contours, i, color, lineThickness, 8);
+//   }
+//   return targetImage;
+// }
 
-void ObjectDetection::publishObservations(std::vector<std::vector<cv::Point>>& contours) const {
-  machine_vision::ObservationArray observationArrayMsg;
-  for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
-    machine_vision::Observation observationMsg;
-    cv::Point2f center;
-    float radius;
-    cv::minEnclosingCircle(*iter, center, radius);
-    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
-    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(center.y);
-    observationMsg.geometry_detected = false;
-    observationArrayMsg.observations.push_back(observationMsg);
-    ShapeIdentifier shapeIdentifier;
-    shapeIdentifier.processContour(*iter);
-  }
-  this->mObservationPublisher.publish(observationArrayMsg);
-}
+// void ObjectDetection::publishObservations(std::vector<std::vector<cv::Point>>& contours) const {
+//   machine_vision::ObservationArray observationArrayMsg;
+//   for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
+//     machine_vision::Observation observationMsg;
+//     cv::Point2f center;
+//     float radius;
+//     cv::minEnclosingCircle(*iter, center, radius);
+//     observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
+//     observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(center.y);
+//     observationMsg.geometry_detected = false;
+//     observationArrayMsg.observations.push_back(observationMsg);
+//     ShapeIdentifier shapeIdentifier;
+//     shapeIdentifier.processContour(*iter);
+//   }
+//   this->mObservationPublisher.publish(observationArrayMsg);
+// }
 
-void ObjectDetection::publishGeometryObservations(const std::vector<cv::Vec3f>& circles) const {
-  machine_vision::ObservationArray observationArrayMsg;
-  for (std::vector<cv::Vec3f>::const_iterator iter = circles.begin(); iter != circles.end(); ++iter) {
-    machine_vision::Observation observationMsg;
-    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition((*iter)[0]);
-    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition((*iter)[1]);
-    observationMsg.geometry_detected = true;
-    observationArrayMsg.observations.push_back(observationMsg);
-  }
-  this->mObservationPublisher.publish(observationArrayMsg);
-}
+// void ObjectDetection::publishGeometryObservations(const std::vector<cv::Vec3f>& circles) const {
+//   machine_vision::ObservationArray observationArrayMsg;
+//   for (std::vector<cv::Vec3f>::const_iterator iter = circles.begin(); iter != circles.end(); ++iter) {
+//     machine_vision::Observation observationMsg;
+//     observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition((*iter)[0]);
+//     observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition((*iter)[1]);
+//     observationMsg.geometry_detected = true;
+//     observationArrayMsg.observations.push_back(observationMsg);
+//   }
+//   this->mObservationPublisher.publish(observationArrayMsg);
+// }
 
-cv::Mat ObjectDetection::averageObservationsAndPublish(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const {
+cv::Mat ObjectDetection::publishObservations(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const {
   cv::Mat img = imageFrame.clone();
   machine_vision::ObservationArray observationArrayMsg;
-  machine_vision::Observation observationMsg;
-  cv::Point2f averageCenter;
   for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
     cv::Point2f center;
     float radius;
     cv::minEnclosingCircle(*iter, center, radius);
-    averageCenter += center;
-  }
-  if (contours.size() > 0) {
-    averageCenter.x /= contours.size();
-    averageCenter.y /= contours.size();
-    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(averageCenter.x);
-    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(averageCenter.y);
+    machine_vision::Observation observationMsg;
+    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
+    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(center.y);
+    observationMsg.radius = radius;
     observationMsg.geometry_detected = false;
     observationArrayMsg.observations.push_back(observationMsg);
-    cv::circle(img, averageCenter, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0,255,0), -1, cv::LINE_AA);
+    cv::circle(img, center, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0,255,0), -1, cv::LINE_AA);
   }
   this->mObservationPublisher.publish(observationArrayMsg);
   return img;

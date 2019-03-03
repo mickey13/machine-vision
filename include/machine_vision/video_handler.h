@@ -35,8 +35,6 @@ private:
   double normalizePosition(unsigned int position, unsigned int range) const;
   cv::Mat cullImage(const cv::Mat& imageFrame) const;
 
-  static std::string renameTopic(std::string topicName, std::string tag);
-
   const unsigned int PIXEL_WIDTH;
   const unsigned int PIXEL_HEIGHT;
 
@@ -47,8 +45,8 @@ private:
   ros::Rate mRosRate;
   image_transport::ImageTransport mImageTransport;
   image_transport::Subscriber mCameraSubscriber;
-  image_transport::Publisher mCameraPublisher;
-  image_transport::Publisher mDebugPublisher;
+  image_transport::Publisher mAnnotatedImagePublisher;
+  image_transport::Publisher mFilteredImagePublisher;
   cv_bridge::CvImagePtr mCvImagePtr;
   DistortionCorrector* mDistortionCorrector;
   ObjectDetection* mObjectDetection;
