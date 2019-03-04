@@ -54,6 +54,7 @@ add_message_files(
   FILES
   Observation.msg
   ObservationArray.msg
+  TargetEstimateArray.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -153,6 +154,11 @@ add_executable(
   src/image_view_node.cpp
   src/image_view.cpp
 )
+add_executable(
+  tracking_visualization
+  src/tracking_visualization_node.cpp
+  src/tracking_visualization.cpp
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -172,6 +178,11 @@ add_dependencies(
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
+add_dependencies(
+  tracking_visualization
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
@@ -180,6 +191,11 @@ target_link_libraries(
 )
 target_link_libraries(
   image_view
+  ${OpenCV_LIBS}
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(
+  tracking_visualization
   ${OpenCV_LIBS}
   ${catkin_LIBRARIES}
 )

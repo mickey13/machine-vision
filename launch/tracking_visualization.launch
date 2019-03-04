@@ -1,0 +1,6 @@
+<?xml version='1.0' ?>
+<launch>
+  <arg name='name' default='tracking_visualization' />
+
+  <node name='$(arg name)' pkg='machine_vision' type='tracking_visualization' output='screen' />
+</launch>
