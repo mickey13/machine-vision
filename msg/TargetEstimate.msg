@@ -1,0 +1,4 @@
+geometry_msgs/PoseWithCovariance belief
+geometry_msgs/PoseWithCovariance prediction
+geometry_msgs/Pose observation
+float64 time_since_observation

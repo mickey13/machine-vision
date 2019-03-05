@@ -14,8 +14,11 @@ public:
 private:
   TrackingVisualization();
   void targetEstimateCallback(const machine_vision::TargetEstimateArray::ConstPtr& msg);
-  void drawTargetEstimates(cv::Mat image, std::vector<geometry_msgs::PoseWithCovariance> targetEstimates) const;
+  void drawTargetEstimates(cv::Mat image, std::vector<machine_vision::TargetEstimate> targetEstimates) const;
   void drawGrid(cv::Mat image) const;
+  void drawBeliefEstimate(cv::Mat image, geometry_msgs::PoseWithCovariance beliefEstimate) const;
+  void drawPredictionEstimate(cv::Mat image, geometry_msgs::PoseWithCovariance predictionEstimate) const;
+  void drawObservation(cv::Mat image, geometry_msgs::Pose observation) const;
   int getTextOffsetFromText(const std::string& text) const;
   cv::Mat convertCovarianceToPixelUnit(const boost::array<double, 36>& covariance) const;
   cv::RotatedRect getErrorEllipse(double chiSquareVal, cv::Point2i mean, cv::Mat covariance) const;

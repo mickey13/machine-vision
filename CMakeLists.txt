@@ -54,6 +54,7 @@ add_message_files(
   FILES
   Observation.msg
   ObservationArray.msg
+  TargetEstimate.msg
   TargetEstimateArray.msg
 )
 

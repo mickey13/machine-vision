@@ -1,1 +1,1 @@
-geometry_msgs/PoseWithCovariance[] targetEstimates
+TargetEstimate[] target_estimates

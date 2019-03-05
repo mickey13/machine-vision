@@ -21,28 +21,18 @@ TrackingVisualization::TrackingVisualization(ros::NodeHandle& rosNode) {
 void TrackingVisualization::targetEstimateCallback(const machine_vision::TargetEstimateArray::ConstPtr& msg) {
   cv::Mat image(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, cv::Scalar(50, 50, 50));
   this->drawGrid(image);
-  this->drawTargetEstimates(image, msg->targetEstimates);
+  this->drawTargetEstimates(image, msg->target_estimates);
   cv::imshow(WINDOW_NAME, image);
   cv::waitKey(1);
 }
 
-void TrackingVisualization::drawTargetEstimates(cv::Mat image, std::vector<geometry_msgs::PoseWithCovariance> targetEstimates) const {
-  const int width = image.size().width;
-  const int height = image.size().height;
-  for (std::vector<geometry_msgs::PoseWithCovariance>::const_iterator iter = targetEstimates.begin(); iter != targetEstimates.end(); ++iter) {
-    unsigned int x = (unsigned int)((width / 2) + (PIXELS_PER_METER * iter->pose.position.x));
-    unsigned int y = (unsigned int)((height / 2) - (PIXELS_PER_METER * iter->pose.position.y));
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2) << "(" << iter->pose.position.x << ", " << iter->pose.position.y << ")";
-    int offset = this->getTextOffsetFromText(ss.str());
-    // Draw the mean
-    cv::circle(image, cv::Point2i(x, y), MARKER_SIZE, cv::Scalar(47, 253, 41), 3);
-    // Draw the covariance
-    cv::Mat covarianceMatrix = this->convertCovarianceToPixelUnit(iter->covariance);
-    cv::RotatedRect ellipse = getErrorEllipse(2.4477, cv::Point2i(x, y), covarianceMatrix);
-    cv::ellipse(image, ellipse, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
-    // Draw the coordinates of the mean
-    cv::putText(image, ss.str(), cv::Point(x - offset, y + 20), cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar(255, 255, 255));
+void TrackingVisualization::drawTargetEstimates(cv::Mat image, std::vector<machine_vision::TargetEstimate> targetEstimates) const {
+  for (std::vector<machine_vision::TargetEstimate>::const_iterator iter = targetEstimates.begin(); iter != targetEstimates.end(); ++iter) {
+    this->drawPredictionEstimate(image, iter->prediction);
+    this->drawBeliefEstimate(image, iter->belief);
+    if (iter->time_since_observation < 0.1) {
+      this->drawObservation(image, iter->observation);
+    }
   }
 }
 
@@ -70,6 +60,37 @@ void TrackingVisualization::drawGrid(cv::Mat image) const {
   }
   cv::putText(image, "East (m)", cv::Point(width - 74, (height / 2) + 2.5 * TICK_SIZE), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(255, 255, 255));
   cv::putText(image, "North (m)", cv::Point((width / 2) + TICK_SIZE, 15), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(255, 255, 255));
+}
+
+void TrackingVisualization::drawBeliefEstimate(cv::Mat image, geometry_msgs::PoseWithCovariance beliefEstimate) const {
+  unsigned int x = (unsigned int)((image.size().width / 2) + (PIXELS_PER_METER * beliefEstimate.pose.position.x));
+  unsigned int y = (unsigned int)((image.size().height / 2) - (PIXELS_PER_METER * beliefEstimate.pose.position.y));
+  // Draw the mean
+  cv::circle(image, cv::Point2i(x, y), MARKER_SIZE, cv::Scalar(47, 253, 41), 3);
+  // Draw the covariance
+  cv::Mat covarianceMatrix = this->convertCovarianceToPixelUnit(beliefEstimate.covariance);
+  cv::RotatedRect ellipse = getErrorEllipse(2.4477, cv::Point2i(x, y), covarianceMatrix);
+  cv::ellipse(image, ellipse, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+  // Draw the coordinates of the mean
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(2) << "(" << beliefEstimate.pose.position.x << ", " << beliefEstimate.pose.position.y << ")";
+  int offset = this->getTextOffsetFromText(ss.str());
+  cv::putText(image, ss.str(), cv::Point(x - offset, y + 20), cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar(255, 255, 255));
+}
+
+void TrackingVisualization::drawPredictionEstimate(cv::Mat image, geometry_msgs::PoseWithCovariance predictionEstimate) const {
+  unsigned int x = (unsigned int)((image.size().width / 2) + (PIXELS_PER_METER * predictionEstimate.pose.position.x));
+  unsigned int y = (unsigned int)((image.size().height / 2) - (PIXELS_PER_METER * predictionEstimate.pose.position.y));
+  // Draw the covariance
+  cv::Mat covarianceMatrix = this->convertCovarianceToPixelUnit(predictionEstimate.covariance);
+  cv::RotatedRect ellipse = getErrorEllipse(2.4477, cv::Point2i(x, y), covarianceMatrix);
+  cv::ellipse(image, ellipse, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
+}
+
+void TrackingVisualization::drawObservation(cv::Mat image, geometry_msgs::Pose observation) const {
+  unsigned int x = (unsigned int)((image.size().width / 2) + (PIXELS_PER_METER * observation.position.x));
+  unsigned int y = (unsigned int)((image.size().height / 2) - (PIXELS_PER_METER * observation.position.y));
+  cv::circle(image, cv::Point2i(x, y), 1, cv::Scalar(0, 0, 255), 3);
 }
 
 cv::Mat TrackingVisualization::convertCovarianceToPixelUnit(const boost::array<double, 36>& covariance) const {
