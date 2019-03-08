@@ -23,10 +23,9 @@ private:
   cv::Mat filterObjectTypes(const cv::Mat& imageFrame) const;
   cv::Mat filterByColor(const cv::Mat& imageFrame) const;
   cv::Mat detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const;
-  // cv::Mat identifyTarget(const cv::Mat& imageFrame, const std::vector<std::vector<cv::Point>>& contours) const;
-  // void publishObservations(std::vector<std::vector<cv::Point>>& contours) const;
-  // void publishGeometryObservations(const std::vector<cv::Vec3f>& circles) const;
-  cv::Mat publishObservations(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const;
+  cv::Mat detectBoundingBox(const cv::Mat& imageFrame, const cv::Mat& threshold, cv::Rect& boundingBox) const;
+  // cv::Mat publishObservations(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const;
+  void publishObservation(const cv::Rect& boundingBox) const;
 
   ros::NodeHandle* mRosNode;
   ros::Publisher mObservationPublisher;
