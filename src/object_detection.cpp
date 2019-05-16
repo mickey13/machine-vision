@@ -1,5 +1,4 @@
 #include <machine_vision/object_detection.h>
-#include <machine_vision/shape_identifier.h>
 #include <machine_vision/Observation.h>
 #include <machine_vision/ObservationArray.h>
 
@@ -8,28 +7,25 @@
 #include <vector>
 #include <string>
 
-ObjectDetection::ObjectDetection(
-  ros::NodeHandle& rosNode,
-  VideoHandler& videoHandler
-) {
+ObjectDetection::ObjectDetection(ros::NodeHandle &rosNode, VideoHandler &videoHandler, bool enabled) {
   this->mRosNode = &rosNode;
   this->mVideoHandler = &videoHandler;
   this->mVideoHandler->registerCallback(this, &ObjectDetection::imageEvent);
+  this->mEnableService = this->mRosNode->advertiseService("machine_vision/enable", &ObjectDetection::enableService, this);
   this->mObservationPublisher = this->mRosNode->advertise<machine_vision::ObservationArray>("machine_vision/observations", 1);
+  this->mDetectionEnabled = true;
 }
 
 void ObjectDetection::imageEvent(cv::Mat imageFrame) {
-  ShapeIdentifier shapeIdentifier;
-  std::vector<std::vector<cv::Point>> contours;
-  // std::vector<cv::Vec3f> circles;
-  cv::Rect boundingBox;
-  cv::Mat thresholdFrame = this->filterObjectTypes(imageFrame);
-  cv::Mat annotatedFrame = this->detectBoundingBox(imageFrame, thresholdFrame, boundingBox);
-  // cv::Mat contoursFrame = this->detectExteriorContours(thresholdFrame, true, contours);
-  // cv::Mat annotatedFrame = this->publishObservations(imageFrame, contours);
-  this->publishObservation(boundingBox);
-  this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
-  this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
+  if (this->mDetectionEnabled) {
+    std::vector<std::vector<cv::Point>> contours;
+    cv::Rect boundingBox;
+    cv::Mat thresholdFrame = this->filterObjectTypes(imageFrame);
+    cv::Mat annotatedFrame = this->detectBoundingBox(imageFrame, thresholdFrame, boundingBox);
+    this->publishObservation(boundingBox);
+    this->mVideoHandler->publishAnnotatedImage(annotatedFrame, sensor_msgs::image_encodings::BGR8);
+    this->mVideoHandler->publishDebugImage(thresholdFrame, sensor_msgs::image_encodings::MONO8);
+  }
 }
 
 void ObjectDetection::loadColorFilters(XmlRpc::XmlRpcValue& colorFilterStruct) {
@@ -77,6 +73,19 @@ void ObjectDetection::loadObjectTypes(XmlRpc::XmlRpcValue& objectTypeStruct) {
   }
 }
 
+bool ObjectDetection::enableService(std_srvs::SetBool::Request& request, std_srvs::SetBool::Response& response) {
+  if (this->mDetectionEnabled == request.data) {
+    response.success = false;
+    response.message = "Object detection has already been set to [" + this->enabledStateString() + "].";
+  }
+  else {
+    this->mDetectionEnabled = request.data;
+    response.success = true;
+    response.message = "Object detection is now set to [" + this->enabledStateString() + "].";
+  }
+  return true;
+}
+
 cv::Mat ObjectDetection::filterObjectTypes(const cv::Mat& imageFrame) const {
   cv::Mat combinedFrame = cv::Mat::zeros(imageFrame.size(), CV_8UC1);
   for (std::map<std::string, ObjectType>::const_iterator iter = this->mObjectTypes.begin(); iter != this->mObjectTypes.end(); ++iter) {
@@ -86,81 +95,31 @@ cv::Mat ObjectDetection::filterObjectTypes(const cv::Mat& imageFrame) const {
   return combinedFrame;
 }
 
-cv::Mat ObjectDetection::filterByColor(const cv::Mat& imageFrame) const {
-  cv::Mat thresholdFrame;
-  if (imageFrame.dims > 0) {
-    std::map<std::string, ColorFilter>::const_iterator iter = this->mColorFilters.find("white");
-    if (iter != this->mColorFilters.end()) {
-      thresholdFrame = iter->second.filterImage(imageFrame);
-    }
-    else {
-      thresholdFrame = cv::Mat::zeros(imageFrame.size(), CV_8UC1);
-    }
-  }
-  return thresholdFrame;
-}
-
-// This approach seems to not work very well for all but the most simple examples.
-cv::Mat ObjectDetection::detectExteriorContours(const cv::Mat& imageFrame, bool isMono, std::vector<std::vector<cv::Point>>& contours) const {
-  std::vector<cv::Vec4i> hierarchy;
-  cv::Mat grayImage;
-  cv::Mat cannyOutput;
-  cv::RNG rng(12345);
-  int threshold = 100;
-  if (isMono) {
-    grayImage = imageFrame;
-  }
-  else {
-    cv::cvtColor(imageFrame, grayImage, CV_BGR2GRAY);
-  }
-  cv::blur(grayImage, grayImage, cv::Size(3, 3));
-  cv::Canny(grayImage, cannyOutput, threshold, threshold * 3, 3);
-  cv::findContours(cannyOutput, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-  cv::Mat contourImage = cv::Mat::zeros(cannyOutput.size(), CV_8UC3);
-  for (int i = 0; i < contours.size(); ++i) {
-    cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255));
-    cv::drawContours(contourImage, contours, i, color, 2, 8, hierarchy, 0, cv::Point());
-  }
-  return contourImage;
-}
-
 cv::Mat ObjectDetection::detectBoundingBox(const cv::Mat& imageFrame, const cv::Mat& threshold, cv::Rect& boundingBox) const {
   cv::Mat pixels;
   cv::Mat annotatedFrame = imageFrame.clone();
   cv::findNonZero(threshold, pixels);
   boundingBox = cv::boundingRect(pixels);
-  cv::Point2i center(boundingBox.x + (boundingBox.width / 2), boundingBox.y + (boundingBox.height / 2));
-  cv::rectangle(annotatedFrame, boundingBox, cv::Scalar(255,0,0), 2);
-  cv::circle(annotatedFrame, center, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0,255,0), -1, cv::LINE_AA);
+  if (boundingBox.area() > 0) {
+    cv::Point2i center(boundingBox.x + (boundingBox.width / 2), boundingBox.y + (boundingBox.height / 2));
+    cv::rectangle(annotatedFrame, boundingBox, cv::Scalar(255, 0, 0), 2);
+    cv::circle(annotatedFrame, center, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
+  }
   return annotatedFrame;
 }
 
-// cv::Mat ObjectDetection::publishObservations(const cv::Mat& imageFrame, std::vector<std::vector<cv::Point>>& contours) const {
-//   cv::Mat img = imageFrame.clone();
-//   machine_vision::ObservationArray observationArrayMsg;
-//   for (std::vector<std::vector<cv::Point>>::const_iterator iter = contours.begin(); iter != contours.end(); ++iter) {
-//     cv::Point2f center;
-//     float radius;
-//     cv::minEnclosingCircle(*iter, center, radius);
-//     machine_vision::Observation observationMsg;
-//     observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(center.x);
-//     observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(center.y);
-//     observationMsg.radius = radius;
-//     observationMsg.geometry_detected = false;
-//     observationArrayMsg.observations.push_back(observationMsg);
-//     cv::circle(img, center, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0,255,0), -1, cv::LINE_AA);
-//   }
-//   this->mObservationPublisher.publish(observationArrayMsg);
-//   return img;
-// }
-
 void ObjectDetection::publishObservation(const cv::Rect& boundingBox) const {
-  std::cout << "test " << boundingBox.height << " " << boundingBox.y << std::endl;
   machine_vision::ObservationArray observationArrayMsg;
-  machine_vision::Observation observationMsg;
-  observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(boundingBox.x + (boundingBox.width / 2));
-  observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(boundingBox.y + (boundingBox.height / 2));
-  observationMsg.area = boundingBox.area();
-  observationArrayMsg.observations.push_back(observationMsg);
+  if (boundingBox.area() > 0) {
+    machine_vision::Observation observationMsg;
+    observationMsg.position.x = this->mVideoHandler->normalizeWidthPosition(boundingBox.x + (boundingBox.width / 2));
+    observationMsg.position.y = -1.0 * this->mVideoHandler->normalizeHeightPosition(boundingBox.y + (boundingBox.height / 2));
+    observationMsg.area = boundingBox.area();
+    observationArrayMsg.observations.push_back(observationMsg);
+  }
   this->mObservationPublisher.publish(observationArrayMsg);
+}
+
+std::string ObjectDetection::enabledStateString() const {
+  return this->mDetectionEnabled ? "enabled" : "disabled";
 }

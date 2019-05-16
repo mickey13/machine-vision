@@ -3,10 +3,13 @@
   <arg name='camera' default='$(find machine_vision)/config/camera.yaml' />
   <arg name='color_filters' default='$(find machine_vision)/config/color_filters.yaml' />
   <arg name='object_types' default='$(find machine_vision)/config/object_types.yaml' />
+  <arg name='enabled' default='true' />
 
   <rosparam command='load' file='$(arg camera)' />
   <rosparam command='load' file='$(arg color_filters)' />
   <rosparam command='load' file='$(arg object_types)' />
 
-  <node name='object_detection' pkg='machine_vision' type='object_detection' output='screen' />
+  <node name='object_detection' pkg='machine_vision' type='object_detection' output='screen'>
+    <param name='enabled' type='bool' value='$(arg enabled)' />
+  </node>
 </launch>
