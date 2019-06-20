@@ -23,6 +23,7 @@ private:
   cv::Mat filterObjectTypes(const cv::Mat& imageFrame) const;
   cv::Mat detectBoundingBox(const cv::Mat& imageFrame, const cv::Mat& threshold, cv::Rect& boundingBox) const;
   void publishObservation(const cv::Rect& boundingBox) const;
+  int computeMarkerSize(const cv::Rect& boundingBox) const;
   std::string enabledStateString() const;
 
   ros::NodeHandle* mRosNode;

@@ -102,8 +102,8 @@ cv::Mat ObjectDetection::detectBoundingBox(const cv::Mat& imageFrame, const cv::
   boundingBox = cv::boundingRect(pixels);
   if (boundingBox.area() > 0) {
     cv::Point2i center(boundingBox.x + (boundingBox.width / 2), boundingBox.y + (boundingBox.height / 2));
-    cv::rectangle(annotatedFrame, boundingBox, cv::Scalar(255, 0, 0), 2);
-    cv::circle(annotatedFrame, center, 2 * this->mVideoHandler->getLineThickness(), cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
+    cv::rectangle(annotatedFrame, boundingBox, cv::Scalar(55, 140, 167), 2);
+    cv::circle(annotatedFrame, center, this->computeMarkerSize(boundingBox), cv::Scalar(232, 119, 34), -1, cv::LINE_AA);
   }
   return annotatedFrame;
 }
@@ -118,6 +118,13 @@ void ObjectDetection::publishObservation(const cv::Rect& boundingBox) const {
     observationArrayMsg.observations.push_back(observationMsg);
   }
   this->mObservationPublisher.publish(observationArrayMsg);
+}
+
+int ObjectDetection::computeMarkerSize(const cv::Rect& boundingBox) const {
+  const int MIN_MARKER_SIZE = 5;
+  int largestSide = boundingBox.width > boundingBox.height ? boundingBox.width : boundingBox.height;
+  int markerSize = (int)(0.025 * largestSide);
+  return markerSize > MIN_MARKER_SIZE ? markerSize : MIN_MARKER_SIZE;
 }
 
 std::string ObjectDetection::enabledStateString() const {
