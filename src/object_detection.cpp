@@ -62,12 +62,26 @@ void ObjectDetection::loadObjectTypes(XmlRpc::XmlRpcValue& objectTypeStruct) {
       ROS_ASSERT(iter->second.hasMember("name"));
       ROS_ASSERT(iter->second.hasMember("color_filters"));
       ROS_ASSERT(iter->second["color_filters"].getType() == XmlRpc::XmlRpcValue::TypeArray);
-      std::vector<ColorFilter*> colorFilters;
+      std::vector<ColorFilter> colorFilters;
+      std::vector<RoiMarker> roiMarkers;
       for (int i = 0; i < iter->second["color_filters"].size(); ++i) {
         std::string filterName = static_cast<std::string>((iter->second)["color_filters"][i]);
-        colorFilters.push_back(&(this->mColorFilters.find(filterName)->second));
+        auto colorFilter = this->mColorFilters.find(filterName);
+        if (colorFilter != this->mColorFilters.end()) {
+          colorFilters.push_back(colorFilter->second);
+        }
       }
-      ObjectType objectType(iter->second["name"], colorFilters);
+      if (iter->second.hasMember("roi_markers")) {
+        ROS_ASSERT(iter->second["roi_markers"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+        for (int i = 0; i < iter->second["roi_markers"].size(); ++i) {
+          std::string filterName = static_cast<std::string>((iter->second)["roi_markers"][i]);
+          auto colorFilter = this->mColorFilters.find(filterName);
+          if (colorFilter != this->mColorFilters.end()) {
+            roiMarkers.push_back(RoiMarker(colorFilter->second));
+          }
+        }
+      }
+      ObjectType objectType(iter->second["name"], colorFilters, roiMarkers);
       this->mObjectTypes.insert(std::pair<std::string, ObjectType>(iter->first, objectType));
     }
   }

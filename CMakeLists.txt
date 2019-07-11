@@ -148,6 +148,7 @@ add_executable(
   src/object_type.cpp
   src/distortion_corrector.cpp
   src/ocam_functions.cpp
+  src/roi_marker.cpp
 )
 add_executable(
   image_view
